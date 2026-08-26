@@ -30,9 +30,13 @@ async def main() -> None:
     await init_db()
     logger.info("Database initialized")
 
-    # Initialize queue
-    queue = await get_queue()
-    logger.info("Redis queue connected")
+    # Initialize queue (optional)
+    try:
+        queue = await get_queue()
+        logger.info("Redis queue connected")
+    except Exception as e:
+        logger.warning("Redis not available (optional): %s", e)
+        queue = None
 
     # Initialize bot
     bot = Bot(token=settings.bot_token, parse_mode="HTML")
@@ -68,7 +72,8 @@ async def main() -> None:
     finally:
         await bot.session.close()
         await close_db()
-        await queue.close()
+        if queue is not None:
+            await queue.close()
         clean_temp_files()
         logger.info("Bot stopped cleanly")
 

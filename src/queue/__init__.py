@@ -101,9 +101,12 @@ _queue: Optional[RedisQueue] = None
 
 
 async def get_queue() -> RedisQueue:
-    """Get singleton queue instance."""
+    """Get singleton queue instance (optional)."""
     global _queue
     if _queue is None:
         _queue = RedisQueue()
-        await _queue.init()
+        try:
+            await _queue.init()
+        except Exception:
+            pass  # Redis optional on Render without service
     return _queue
