@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Bot
     bot_token: str = ""
-    admin_ids: List[int] = []
+    admin_ids: Union[List[int], int] = []
 
     # Concurrency & limits
     max_concurrent_downloads: int = 3
@@ -65,6 +65,14 @@ def get_settings() -> Settings:
     s.ensure_dirs()
     if "RENDER" in os.environ:
         s.is_render = True
+    # Normalize admin_ids to a list of ints
+    if isinstance(s.admin_ids, int):
+        s.admin_ids = [s.admin_ids]
+    elif isinstance(s.admin_ids, str):
+        if s.admin_ids:
+            s.admin_ids = [int(x.strip()) for x in s.admin_ids.split(",") if x.strip()]
+        else:
+            s.admin_ids = []
     return s
 
 
