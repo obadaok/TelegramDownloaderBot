@@ -9,7 +9,6 @@ aiosqlite==0.20.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
 python-dotenv==1.0.4
-watchtower==3.4.0
 httpx==0.28.1
 aiofiles==24.1.0
 tenacity==9.1.2
