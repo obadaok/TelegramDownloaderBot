@@ -1,0 +1,29 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env/
+.venv/
+env/
+venv/
+
+# Database
+*.db
+data/
+
+# Docker
+.dockerinit
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Render
+render.yaml
+
+# secrets
+.env
