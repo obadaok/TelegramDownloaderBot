@@ -391,35 +391,19 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
     if info.duration:
         text += f"⏱ {format_duration(info.duration)}\n"
 
-    # Try to show thumbnail
-    thumb_url = info.thumbnail
-    if thumb_url and thumb_url.startswith("http"):
-        try:
-            from aiogram.types import URLInputFile
-            thumb = URLInputFile(thumb_url)
-            await status_msg.delete()
-            status_msg = await msg.answer_photo(
-                photo=thumb,
-                caption=text + f"\nاختياري الجودة عايزاها:",
-                reply_markup=video_quality_kb(),
-            )
-            await state.update_data(
-                url=url,
-                title=title,
-                platform=platform,
-                thumbnail=thumb_url,
-                duration=info.duration,
-                status_msg_id=status_msg.message_id,
-            )
-            return
-        except Exception:
-            pass  # fallback to text
+    # Show info as text (simple & safe — no delete/edit race conditions)
+    try:
+        await status_msg.edit_text(
+            text + f"\nاختياري الجودة عايزاها 👇",
+            reply_markup=video_quality_kb(),
+        )
+    except TelegramBadRequest:
+        # Message was deleted or edited elsewhere — send a fresh one
+        status_msg = await msg.answer(
+            text + f"\nاختياري الجودة عايزاها 👇",
+            reply_markup=video_quality_kb(),
+        )
 
-    # Text fallback (no thumbnail)
-    await status_msg.edit_text(
-        text + f"\nاختياري الجودة عايزاها:",
-        reply_markup=video_quality_kb(),
-    )
     await state.update_data(
         url=url,
         title=title,
@@ -427,22 +411,29 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
         thumbnail=info.thumbnail,
         duration=info.duration,
         status_msg_id=status_msg.message_id,
+        chat_id=msg.chat.id,
     )
 
 
 # ===== CALLBACKS =====
 
 async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
-    await query.answer()
+    try:
+        await query.answer()
+    except Exception:
+        pass  # Already answered or expired
     data = query.data
     user = query.from_user
 
-    # Main menu callbacks
+    # Main menu callbacks — use safe edit (fallback to new message)
     if data == "cmd_menu":
-        await query.message.edit_text(
-            "📋 القائمة الرئيسية بتاعتي:",
-            reply_markup=main_menu_kb(),
-        )
+        try:
+            await query.message.edit_text(
+                "📋 القائمة الرئيسية بتاعتي:",
+                reply_markup=main_menu_kb(),
+            )
+        except TelegramBadRequest:
+            await query.message.answer("📋 القائمة الرئيسية بتاعتي:", reply_markup=main_menu_kb())
         return
     if data == "cmd_help":
         await cmd_help(query.message)
@@ -475,10 +466,13 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
         await cmd_history(query.message)
         return
     if data == "cancel":
-        await query.message.edit_text(
-            "❌ فسخنا أمر التنزيل.",
-            reply_markup=back_to_menu_kb(),
-        )
+        try:
+            await query.message.edit_text(
+                "❌ فسخنا أمر التنزيل.",
+                reply_markup=back_to_menu_kb(),
+            )
+        except TelegramBadRequest:
+            pass
         await state.clear()
         return
     if data == "setting_name":
@@ -493,16 +487,22 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
 
     if data.startswith("cancel_job:"):
         job_id = int(data.split(":")[1])
-        await query.message.edit_text(
-            "⛔ فسخت المهمة بنجاح.",
-            reply_markup=back_to_menu_kb(),
-        )
+        try:
+            await query.message.edit_text(
+                "⛔ فسخت المهمة بنجاح.",
+                reply_markup=back_to_menu_kb(),
+            )
+        except TelegramBadRequest:
+            pass
         return
 
-    await query.message.edit_text(
-        "⚠️ حاجة مش معروفة، جرّبي تاني.",
-        reply_markup=back_to_menu_kb(),
-    )
+    try:
+        await query.message.edit_text(
+            "⚠️ حاجة مش معروفة، جرّبي تاني.",
+            reply_markup=back_to_menu_kb(),
+        )
+    except TelegramBadRequest:
+        pass
 
 
 async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> None:
@@ -517,10 +517,13 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
     duration = state_data.get("duration")
 
     if not url:
-        await query.message.edit_text(
-            "❌ مش شايفة الرابط. أرسلّي أول حاجة رابطًا.",
-            reply_markup=back_to_menu_kb(),
-        )
+        try:
+            await query.message.edit_text(
+                "❌ مش شايفة الرابط. أرسلّي أول حاجة رابطًا.",
+                reply_markup=back_to_menu_kb(),
+            )
+        except TelegramBadRequest:
+            pass
         return
 
     # Create job
@@ -558,23 +561,33 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
             await s2.commit()
 
     # Download with progress
-    await query.message.edit_text(
+    progress_text = (
         f"⏳ جارية أنزّل ليك...\n"
         f"📹 {truncate_text(title, 60)}\n"
         f"🎯 {quality}\n\n"
         f"{_progress_bar(0)} 0%\n"
-        f"⬇️ جارية الاستعداد...",
+        f"⬇️ جارية الاستعداد..."
     )
+    try:
+        await query.message.edit_text(progress_text)
+        progress_msg_id = query.message.message_id
+    except TelegramBadRequest:
+        # Message was deleted by a duplicate webhook — send fresh progress msg
+        prog_msg = await query.message.answer(progress_text)
+        if prog_msg:
+            progress_msg_id = prog_msg.message_id
+        else:
+            progress_msg_id = query.message.message_id
 
     kind_str = "video" if kind == "video" else "audio"
-    
+
     # The event loop the download callbacks will be sent to
     main_loop = asyncio.get_event_loop()
-    
+
     progress_ctx = {
         "pct": -1,
         "chat_id": query.message.chat.id,
-        "msg_id": query.message.message_id,
+        "msg_id": progress_msg_id,  # Use safe message id
         "title": title,
         "quality": quality,
     }
@@ -658,15 +671,18 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 job.completed_at = datetime.now(timezone.utc)
                 await session.commit()
 
-        # Send the file
-        await _bot.edit_message_text(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            text=(
-                f"📤 جارية أرسل ليك {truncate_text(title, 60)}...\n"
-                f"{_progress_bar(100)} 100%"
-            ),
-        )
+        # Notify: sending file
+        try:
+            await _bot.edit_message_text(
+                chat_id=progress_ctx["chat_id"],
+                message_id=progress_ctx["msg_id"],
+                text=(
+                    f"📤 جارية أرسل ليك {truncate_text(title, 60)}...\n"
+                    f"{_progress_bar(100)} 100%"
+                ),
+            )
+        except TelegramBadRequest:
+            pass
 
         filename = Path(file_path).name
         file_input = FSInputFile(file_path, filename=filename)
@@ -692,11 +708,11 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 ),
             )
 
-        # Clean status message
+        # Mark done in the progress message
         try:
             await _bot.edit_message_text(
-                chat_id=query.message.chat.id,
-                message_id=query.message.message_id,
+                chat_id=progress_ctx["chat_id"],
+                message_id=progress_ctx["msg_id"],
                 text="✅ التنزيل اكتمل بنجاح! 😊",
             )
         except TelegramBadRequest:
@@ -721,15 +737,27 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 job.error_message = error_msg
                 await session.commit()
 
-        await _bot.edit_message_text(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            text=(
-                f"❌ ما قادرة أكمل التنزيل 😔\n"
-                f"السبب: {truncate_text(error_msg, 100)}\n\n"
-                f"جرّبي رابط تاني أو غير الجودة."
-            ),
-            reply_markup=back_to_menu_kb(),
-        )
+        try:
+            await _bot.edit_message_text(
+                chat_id=progress_ctx["chat_id"],
+                message_id=progress_ctx["msg_id"],
+                text=(
+                    f"❌ ما قادرة أكمل التنزيل 😔\n"
+                    f"السبب: {truncate_text(error_msg, 100)}\n\n"
+                    f"جرّبي رابط تاني أو غير الجودة."
+                ),
+                reply_markup=back_to_menu_kb(),
+            )
+        except TelegramBadRequest:
+            # Fallback: send new message if the old one is gone
+            try:
+                await query.message.answer(
+                    f"❌ ما قادرة أكمل التنزيل 😔\n"
+                    f"السبب: {truncate_text(error_msg, 100)}\n\n"
+                    f"جرّبي رابط تاني أو غير الجودة.",
+                    reply_markup=back_to_menu_kb(),
+                )
+            except TelegramBadRequest:
+                pass
     finally:
         await state.clear()
