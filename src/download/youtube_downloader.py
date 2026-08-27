@@ -76,8 +76,8 @@ def is_valid_url(url: str) -> bool:
 def _build_base_opts(extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Build common yt-dlp options."""
     opts: Dict[str, Any] = {
-        "quiet": True,
-        "no_warnings": True,
+        "quiet": False,
+        "no_warnings": False,
         "noprogress": True,
         "skip_download": True,
         "extract_flat": False,
@@ -87,7 +87,8 @@ def _build_base_opts(extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "socket_timeout": settings.yt_dlp_socket_timeout,
         "retries": settings.yt_dlp_retries,
         "concurrent_fragment_downloads": settings.yt_dlp_concurrent_fragments,
-        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "extractor_args": {"youtube": {"player_client": ["default"]}},
     }
     if extra:
         opts.update(extra)
@@ -205,14 +206,15 @@ class YTDLPDownloader:
         job_id: int,
         quality: str = "best",
         kind: str = "video",
+        progress_hook=None,
     ) -> Optional[str]:
         """Download to a file on disk and return its path."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None, self._download_sync, url, job_id, quality, kind
+            None, self._download_sync, url, job_id, quality, kind, progress_hook
         )
 
-    def _download_sync(self, url: str, job_id: int, quality: str, kind: str) -> Optional[str]:
+    def _download_sync(self, url: str, job_id: int, quality: str, kind: str, progress_hook=None) -> Optional[str]:
         download_dir = settings.download_path
         download_dir.mkdir(parents=True, exist_ok=True)
         outtmpl = str(download_dir / f"{job_id}_%(id)s.%(ext)s")
@@ -232,7 +234,12 @@ class YTDLPDownloader:
             "merge_output_format": "mp4" if kind == "video" else None,
             "postprocessors": [],
             "geo_bypass": True,
+            "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "extractor_args": {"youtube": {"player_client": ["default"]}},
         }
+
+        if progress_hook:
+            opts["progress_hooks"] = [progress_hook]
 
         if kind == "audio":
             opts["postprocessors"] = [
@@ -266,26 +273,22 @@ class YTDLPDownloader:
 
     def _build_format_selector(self, quality: str, kind: str) -> str:
         if kind == "audio":
-            return "bestaudio/best"
+            return "ba/b"
 
         q = (quality or "best").lower()
         if q in ("best", ""):
-            return "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+            return "bv*+ba/b"
         if q in ("worst",):
-            return "worstvideo+worstaudio/worst"
-        # Map 360/480/720/1080 to height
+            return "wv*+wa/w"
         height_map = {
-            "360p": 360, "480p": 480, "720p": 720, "1080p": 1080,
-            "144p": 144, "240p": 240,
+            "1080p": 1080, "720p": 720, "480p": 480, "360p": 360,
+            "240p": 240, "144p": 144,
         }
         h = height_map.get(q)
         if h:
-            return (
-                f"bestvideo[height<={h}][ext=mp4]+bestaudio[ext=m4a]/"
-                f"bestvideo[height<={h}]+bestaudio/"
-                f"best[height<={h}]/best"
-            )
-        return "bestvideo+bestaudio/best"
+            # Merge video + audio formats at or below height
+            return f"bv*[height<={h}]+ba[height<={h}]/b[height<={h}]/bv*+ba/b"
+        return "bv*+ba/b"
 
 
 # Singleton
