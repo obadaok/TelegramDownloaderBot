@@ -135,6 +135,7 @@ class YTDLPDownloader:
 
     def _extract_sync(self, url: str) -> Optional[MediaInfo]:
         opts = _build_base_opts()
+        logger.info("yt-dlp extracting: %s", url)
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 data = ydl.extract_info(url, download=False)
@@ -143,7 +144,11 @@ class YTDLPDownloader:
             return None
 
         if not data:
+            logger.warning("yt-dlp returned None for %s", url)
             return None
+
+        logger.info("yt-dlp extracted OK: %s (%s formats)",
+                    data.get("title", "?"), len(data.get("formats") or []))
 
         # Some extractors wrap entries (playlists). Take the first.
         if "entries" in data and data["entries"]:

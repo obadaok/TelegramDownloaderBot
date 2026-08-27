@@ -376,30 +376,29 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
     if info.duration:
         text += f"⏱ {format_duration(info.duration)}\n"
 
-    async with state.get_data() as data:
-        # Try to show thumbnail
-        thumb_url = info.thumbnail
-        if thumb_url and thumb_url.startswith("http"):
-            try:
-                from aiogram.types import URLInputFile
-                thumb = URLInputFile(thumb_url)
-                await status_msg.delete()
-                status_msg = await msg.answer_photo(
-                    photo=thumb,
-                    caption=text + f"\nاختياري الجودة عايزاها:",
-                    reply_markup=video_quality_kb(),
-                )
-                await state.update_data(
-                    url=url,
-                    title=title,
-                    platform=platform,
-                    thumbnail=thumb_url,
-                    duration=info.duration,
-                    status_msg_id=status_msg.message_id,
-                )
-                return
-            except Exception:
-                pass  # fallback to text
+    # Try to show thumbnail
+    thumb_url = info.thumbnail
+    if thumb_url and thumb_url.startswith("http"):
+        try:
+            from aiogram.types import URLInputFile
+            thumb = URLInputFile(thumb_url)
+            await status_msg.delete()
+            status_msg = await msg.answer_photo(
+                photo=thumb,
+                caption=text + f"\nاختياري الجودة عايزاها:",
+                reply_markup=video_quality_kb(),
+            )
+            await state.update_data(
+                url=url,
+                title=title,
+                platform=platform,
+                thumbnail=thumb_url,
+                duration=info.duration,
+                status_msg_id=status_msg.message_id,
+            )
+            return
+        except Exception:
+            pass  # fallback to text
 
     # Text fallback (no thumbnail)
     await status_msg.edit_text(
@@ -553,16 +552,16 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
     )
 
     kind_str = "video" if kind == "video" else "audio"
-    progress_last_update = {"pct": -1, "chat_id": query.message.chat.id, "msg_id": query.message.message_id}
+    progress_ctx = {"pct": -1, "chat_id": query.message.chat.id, "msg_id": query.message.message_id}
 
-    async def _progress_cb(pct: int, speed: str, eta: str, downloaded: str):
-        if pct == progress_last_update["pct"] or pct - progress_last_update["pct"] < 10:
+    async def _update_progress(pct: int, speed: str, eta: str, downloaded: str):
+        if pct == progress_ctx["pct"] or pct - progress_ctx["pct"] < 10:
             return
-        progress_last_update["pct"] = pct
+        progress_ctx["pct"] = pct
         try:
             await _bot.edit_message_text(
-                chat_id=progress_last_update["chat_id"],
-                message_id=progress_last_update["msg_id"],
+                chat_id=progress_ctx["chat_id"],
+                message_id=progress_ctx["msg_id"],
                 text=(
                     f"⏳ جارية أنزّل ليك...\n"
                     f"📹 {truncate_text(title, 60)}\n"
@@ -576,6 +575,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
             pass
 
     def _hook(d):
+        """Called from yt-dlp thread — use CPython GIL to safely schedule tasks."""
         try:
             if d.get("status") == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
@@ -584,14 +584,16 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 eta = d.get("_eta_str", "N/A").strip()
                 if total > 0:
                     pct = min(int(downloaded / total * 100), 100)
+                    loop = asyncio.get_event_loop()
                     asyncio.run_coroutine_threadsafe(
-                        _progress_cb(pct, speed, eta, format_size(downloaded)),
-                        asyncio.get_event_loop(),
+                        _update_progress(pct, speed, eta, format_size(downloaded)),
+                        loop,
                     )
             elif d.get("status") == "finished":
+                loop = asyncio.get_event_loop()
                 asyncio.run_coroutine_threadsafe(
-                    _progress_cb(100, "تم!", "لحظات...", "جاري الإرسال"),
-                    asyncio.get_event_loop(),
+                    _update_progress(100, "تم!", "لحظات...", "جاري الإرسال"),
+                    loop,
                 )
         except Exception:
             pass
