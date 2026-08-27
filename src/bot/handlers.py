@@ -352,15 +352,30 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
         info = await get_downloader().extract_info(url)
     except Exception as e:
         logger.exception("Extract error for %s", url)
-        await status_msg.edit_text(
-            "ما قادرة أستخرج معلومات الفيديو 😔\n"
-            "تأكدّي الرابط صحيح أو جرّبي من جديد."
-        )
+        err = str(e).lower()
+        if "unsupported url" in err:
+            await status_msg.edit_text(
+                "❌ النوع ده من الروابط ما مدعوم 😔\n\n"
+                "لو ده تيك توك *صور* (slideshow) — ما بقدر أنزّلها.\n"
+                "جرّبي رابط *فيديو* عادي (فيه /video/ في الرابط)."
+            )
+        elif "tiktok" in url.lower() and "unexpected" in err:
+            await status_msg.edit_text(
+                "❌ تيك توك حظر الطلب من السيرفر 😔\n\n"
+                "دي مشكلة معروفة في yt-dlp مع تيك توك.\n"
+                "جرّبي لاحقاً أو استخدمي رابط يوتيوب — شغال 💯."
+            )
+        else:
+            await status_msg.edit_text(
+                f"❌ ما قادرة أستخرج معلومات 😔\n"
+                f"السبب: <code>{truncate_text(str(e), 120)}</code>\n\n"
+                f"جرّبي رابط تاني."
+            )
         return
 
     if not info:
         await status_msg.edit_text(
-            "ما قادرة أستخرج معلومات من الرابط ده 😔\n"
+            "❌ ما قادرة أستخرج معلومات من الرابط ده 😔\n"
             "تأكدّي الرابط صحيح أو جرّبي واحد تاني."
         )
         return
