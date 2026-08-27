@@ -24,7 +24,9 @@ def setup_logging() -> None:
 
 def clean_temp_files() -> None:
     """Remove temporary files."""
-    for path in [settings.data_dir, settings.download_path, settings.thumbnail_path]:
+    from pathlib import Path
+    for p in [settings.data_dir, settings.download_path, settings.thumbnail_path]:
+        path = Path(p) if isinstance(p, str) else p
         if path.exists():
             for f in path.iterdir():
                 if f.is_file() and f.suffix.lower() in (".tmp", ".part", ".ytdl"):
