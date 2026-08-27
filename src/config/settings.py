@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     is_render: bool = False
     data_dir: str = "./data"
 
+    # Webhook (for production/Render)
+    webhook_url: str = ""
+    webhook_path: str = "/webhook"
+    webhook_secret: str = ""
+    webhook_port: int = 10000
+
     @property
     def data_path(self) -> Path:
         return Path(self.data_dir)
