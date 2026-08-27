@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.types import BotCommand
 from aiogram.filters import Command
 
@@ -39,7 +40,7 @@ async def main() -> None:
         queue = None
 
     # Initialize bot
-    bot = Bot(token=settings.bot_token, parse_mode="HTML")
+    bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
 
     # Set commands
