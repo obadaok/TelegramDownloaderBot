@@ -1,6 +1,9 @@
 """Database module for the Telegram Downloader Bot."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -23,10 +26,11 @@ async_session_maker = async_sessionmaker(
 )
 
 
-async def get_db_session() -> AsyncSession:
-    """Get a database session."""
+@asynccontextmanager
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    """Get a database session (async context manager)."""
     async with async_session_maker() as session:
-        return session
+        yield session
 
 
 async def init_db() -> None:
