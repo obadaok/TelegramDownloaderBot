@@ -22,8 +22,5 @@ data/
 *.swp
 *.swo
 
-# Render
-render.yaml
-
 # secrets
 .env

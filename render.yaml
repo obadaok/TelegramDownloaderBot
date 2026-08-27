@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: telegram-downloader-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        value: "123456789"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: botdb
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: bot-redis
+          property: connectionString
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: "3"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: WEBHOOK_URL
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: WEBHOOK_PORT
+        value: "10000"
+
+  - type: redis
+    name: bot-redis
+    ipAllowList: []
+    plan: starter
+
+databases:
+  - name: botdb
+    databaseName: botdb
+    user: bot
+
+healthCheckPath: /health
