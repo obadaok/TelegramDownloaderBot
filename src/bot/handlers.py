@@ -118,17 +118,17 @@ async def cmd_start(msg: Message, state: FSMContext) -> None:
 
     if user.display_name:
         await msg.answer(
-            f"يا مرحبا {user.display_name} 💛\n\n"
+            f"أهلاً بيك يا {user.display_name} 💛\n\n"
             "أنا ثونة، بوت التحميل بتاعك.\n"
-            "أرسلّي أي رابط فيديو أو أغنية، وأنا أنزّلهولك!\n\n"
-            "أو افتحي القائمة: /menu",
+            "أرسلّي أي رابط فيديو أو أغنية وأنا أنزّلهولك 🌸\n\n"
+            "قائمة الأوامر: /menu",
             reply_markup=main_menu_kb(),
         )
     else:
         await msg.answer(
-            "أهلا بيكِ يا غالية 🌸\n\n"
-            "أنا ثونة — بوت تحميل فيديوهات وأغانيات.\n"
-            "بس قبل ما نبدأ، شني اسمك؟ (أكتبيهولي)",
+            "أهلاً بيك يا غالية 🌸\n\n"
+            "أنا ثونة، بوت بتحمّل فيديوهات وأغانيات.\n"
+            "عايزة أعرف اسمك — شنو اسمك؟ (أكتبيهولي)",
         )
         await state.set_state(UserNameState.waiting_for_name)
 
@@ -136,10 +136,10 @@ async def cmd_start(msg: Message, state: FSMContext) -> None:
 async def cmd_help(msg: Message) -> None:
     await msg.answer(
         "📖 <b>مساعدة ثونة</b>\n\n"
-        "• أرسلّي أي رابط وبس!\n\n"
+        "أرسلّي أي رابط وبس 😊\n\n"
         "<b>الأوامر:</b>\n"
-        "/start — بداية المحادثة\n"
-        "/menu — القائمة الرئيسية\n"
+        "/start — بداية\n"
+        "/menu — القائمة\n"
         "/name — تغيير اسمك\n"
         "/download — تحميل رابط\n"
         "/audio — أغنية MP3\n"
@@ -147,31 +147,31 @@ async def cmd_help(msg: Message) -> None:
         "/history — سجل التنزيلات\n"
         "/clear — مسح السجل\n"
         "/about — عنّي\n\n"
-        "أي حاجة عايزاها أنا موجودة 💛",
+        "أنا موجودة دايماً 💛",
     )
 
 
 async def cmd_menu(msg: Message) -> None:
-    await msg.answer("📋 القائمة الرئيسية بتاعتي:", reply_markup=main_menu_kb())
+    await msg.answer("📋 القائمة:", reply_markup=main_menu_kb())
 
 
 async def cmd_settings(msg: Message) -> None:
-    await msg.answer("⚙️ الإعدادات بتاعتي:", reply_markup=settings_kb())
+    await msg.answer("⚙️ الإعدادات:", reply_markup=settings_kb())
 
 
 async def cmd_name(msg: Message, state: FSMContext) -> None:
-    await msg.answer("شني الاسم الجديد عايزاني أناديك بيهو؟ 🌸")
+    await msg.answer("شنو الاسم الجديد عايزاني أناديك بيهو؟ 🌸")
     await state.set_state(UserNameState.waiting_for_name)
 
 
 async def cmd_download(msg: Message, state: FSMContext) -> None:
-    await msg.answer("أرسلّي الرابط عايزاهو، وبعدين هي تتحمل 😊")
+    await msg.answer("أرسلّي الرابط عايزاهو 😊")
     await state.set_state(DownloadState.waiting_for_url)
 
 
 async def cmd_audio(msg: Message, state: FSMContext) -> None:
     await msg.answer(
-        "🎵 أرسلّي الرابط، وأنا أطلّع ليك منهو أغنية MP3",
+        "🎵 أرسلّي الرابط وأنا أطلّع ليك أغنية MP3",
         reply_markup=audio_quality_kb(),
     )
     await state.set_state(DownloadState.waiting_for_url)
@@ -179,7 +179,7 @@ async def cmd_audio(msg: Message, state: FSMContext) -> None:
 
 async def cmd_video(msg: Message, state: FSMContext) -> None:
     await msg.answer(
-        "🎬 أرسلّي الرابط، وأنا أنزّل ليك الفيديو MP4",
+        "🎬 أرسلّي الرابط وأنا أنزّلهولك فيديو MP4",
         reply_markup=video_quality_kb(),
     )
     await state.set_state(DownloadState.waiting_for_url)
@@ -202,10 +202,10 @@ async def cmd_queue(msg: Message) -> None:
         jobs = res.scalars().all()
 
     if not jobs:
-        await msg.answer("ماف أي مهام جاية الآن — كلها واضحة ✅")
+        await msg.answer("مافي مهام — كلها واضحة ✅")
         return
 
-    text = "📋 <b>مهام قيد التنفيذ:</b>\n\n"
+    text = "📋 <b>المهام الجاية:</b>\n\n"
     for j in jobs:
         text += (
             f"▸ <code>{truncate_text(j.title or j.url, 40)}</code>\n"
@@ -225,7 +225,7 @@ async def cmd_status(msg: Message) -> None:
         job = res.scalar_one_or_none()
 
     if not job:
-        await msg.answer("لسه ما نزلتي أي حاجة. أرسلّي رابطًا! 💛")
+        await msg.answer("لسه ما نزّلتي أي حاجة. أرسلّي رابط 💛")
         return
 
     status_emoji = {
@@ -250,7 +250,7 @@ async def cmd_status(msg: Message) -> None:
 
 
 async def cmd_cancel(msg: Message, command: CommandObject) -> None:
-    await msg.answer("❌ مش حيفوتني، بس أرسلّي رقم المهمة عايزة تلغيها.")
+    await msg.answer("❌ أرسلّي رقم المهمة عايزة تلغيها.")
 
 
 async def cmd_history(msg: Message) -> None:
@@ -264,7 +264,7 @@ async def cmd_history(msg: Message) -> None:
         jobs = res.scalars().all()
 
     if not jobs:
-        await msg.answer("لسه ما عندك سجل تنزيلات. جرّبي أرسلّي رابطًا 📥")
+        await msg.answer("لسه ما عندك سجل تنزيلات. أرسلّي رابط 📥")
         return
 
     text = "📜 <b>سجل تنزيلاتك:</b>\n\n"
@@ -289,16 +289,16 @@ async def cmd_clear(msg: Message) -> None:
             )
         )
         await session.commit()
-    await msg.answer("🗑 مسحت سجل التنزيلات القديمة ✨", reply_markup=main_menu_kb())
+    await msg.answer("🗑 مسحت السجل القديم ✨", reply_markup=main_menu_kb())
 
 
 async def cmd_about(msg: Message) -> None:
     await msg.answer(
         "🤖 <b>ثونة</b>\n\n"
-        "أنا بوت سوادني بتحمّل ليك فيديوهات وأغانيات من أي منصة 🌍\n"
-        "YouTube • TikTok • Instagram • Facebook • X • Reddit • Vimeo • Twitch • SoundCloud • Pinterest وأكتر\n\n"
-        "💛 أنزّل بجودة عالية، وأنا دايماً في الخدمة!\n"
-        "أرسلّي رابط أي حاجة وجرّبي 😊",
+        "أنا بوت سوداني بتحمّل فيديوهات وأغانيات من أي منصة 🌍\n"
+        "YouTube • TikTok • Instagram • Facebook • X • Reddit وأكتر\n\n"
+        "💛 أنزّلك بجودة عالية، أنا موجودة دايماً!\n"
+        "أرسلّي رابط وجرّبي 😊",
     )
 
 
@@ -323,7 +323,7 @@ async def handle_name_input(msg: Message, state: FSMContext) -> None:
             await session.commit()
 
     await msg.answer(
-        f"تمام يا {name}! 💛\nحفظت اسمك. /menu للقائمة، أو أرسلّي رابطًا!",
+        f"تمام يا {name}! 💛\nحفظت اسمك. /menu للقائمة أو أرسلّي رابط",
         reply_markup=main_menu_kb(),
     )
     await state.clear()
@@ -336,8 +336,8 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
 
     if not is_valid_url(url):
         await msg.answer(
-            "❌ الرابط ده مش واضح لي.\n"
-            "أرسلّي رابط من أي منصة — YouTube, TikTok, Insta, whatever 🌸",
+            "❌ الرابط ده مش واضح.\n"
+            "أرسلّي رابط من YouTube, TikTok, Insta 🌸",
             reply_markup=main_menu_kb(),
         )
         return
@@ -345,7 +345,7 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
     platform = detect_platform(url)
     status_msg = await msg.answer(
         f"🔍 شايفة المنصة: <b>{platform}</b>\n"
-        "جارية أتحقق من المعلومات... ✨"
+        "قاعدة أتحقق من المعلومات... ✨"
     )
 
     try:
@@ -356,27 +356,27 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
         if "unsupported url" in err:
             await status_msg.edit_text(
                 "❌ النوع ده من الروابط ما مدعوم 😔\n\n"
-                "لو ده تيك توك *صور* (slideshow) — ما بقدر أنزّلها.\n"
-                "جرّبي رابط *فيديو* عادي (فيه /video/ في الرابط)."
+                "لو تيك توك صور (slideshow) — ما بقدر أنزّلها.\n"
+                "جرّبي رابط فيديو عادي (/video/)"
             )
         elif "tiktok" in url.lower() and "unexpected" in err:
             await status_msg.edit_text(
-                "❌ تيك توك حظر الطلب من السيرفر 😔\n\n"
-                "دي مشكلة معروفة في yt-dlp مع تيك توك.\n"
-                "جرّبي لاحقاً أو استخدمي رابط يوتيوب — شغال 💯."
+                "❌ تيك توك حظر الطلب 😔\n\n"
+                "دي مشكلة معروفة مع تيك توك.\n"
+                "جرّبي يوتيوب — شغال 💯"
             )
         else:
             await status_msg.edit_text(
                 f"❌ ما قادرة أستخرج معلومات 😔\n"
                 f"السبب: <code>{truncate_text(str(e), 120)}</code>\n\n"
-                f"جرّبي رابط تاني."
+                f"جرّبي رابط تاني"
             )
         return
 
     if not info:
         await status_msg.edit_text(
             "❌ ما قادرة أستخرج معلومات من الرابط ده 😔\n"
-            "تأكدّي الرابط صحيح أو جرّبي واحد تاني."
+            "تأكدي الرابط صحيح أو جرّبي واحد تاني"
         )
         return
 
@@ -391,16 +391,15 @@ async def handle_url_message(msg: Message, state: FSMContext) -> None:
     if info.duration:
         text += f"⏱ {format_duration(info.duration)}\n"
 
-    # Show info as text (simple & safe — no delete/edit race conditions)
+    # Show info as text
     try:
         await status_msg.edit_text(
-            text + f"\nاختياري الجودة عايزاها 👇",
+            text + f"\nاختاري الجودة عايزاها 👇",
             reply_markup=video_quality_kb(),
         )
     except TelegramBadRequest:
-        # Message was deleted or edited elsewhere — send a fresh one
         status_msg = await msg.answer(
-            text + f"\nاختياري الجودة عايزاها 👇",
+            text + f"\nاختاري الجودة عايزاها 👇",
             reply_markup=video_quality_kb(),
         )
 
@@ -429,11 +428,11 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
     if data == "cmd_menu":
         try:
             await query.message.edit_text(
-                "📋 القائمة الرئيسية بتاعتي:",
+                "📋 القائمة:",
                 reply_markup=main_menu_kb(),
             )
         except TelegramBadRequest:
-            await query.message.answer("📋 القائمة الرئيسية بتاعتي:", reply_markup=main_menu_kb())
+            await query.message.answer("📋 القائمة:", reply_markup=main_menu_kb())
         return
     if data == "cmd_help":
         await cmd_help(query.message)
@@ -468,7 +467,7 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
     if data == "cancel":
         try:
             await query.message.edit_text(
-                "❌ فسخنا أمر التنزيل.",
+                "❌ فسخت أمر التنزيل",
                 reply_markup=back_to_menu_kb(),
             )
         except TelegramBadRequest:
@@ -476,7 +475,7 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
         await state.clear()
         return
     if data == "setting_name":
-        await query.message.answer("شني الاسم الجديد عايزاني أناديك بيهو؟ 🌸")
+        await query.message.answer("شنو الاسم الجديد عايزاني أناديك بيهو؟ 🌸")
         await state.set_state(UserNameState.waiting_for_name)
         return
 
@@ -489,7 +488,7 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
         job_id = int(data.split(":")[1])
         try:
             await query.message.edit_text(
-                "⛔ فسخت المهمة بنجاح.",
+                "⛔ فسخت المهمة",
                 reply_markup=back_to_menu_kb(),
             )
         except TelegramBadRequest:
@@ -498,7 +497,7 @@ async def on_callback(query: CallbackQuery, state: FSMContext) -> None:
 
     try:
         await query.message.edit_text(
-            "⚠️ حاجة مش معروفة، جرّبي تاني.",
+            "⚠️ الأمر مش معروف، جرّبي تاني",
             reply_markup=back_to_menu_kb(),
         )
     except TelegramBadRequest:
@@ -519,7 +518,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
     if not url:
         try:
             await query.message.edit_text(
-                "❌ مش شايفة الرابط. أرسلّي أول حاجة رابطًا.",
+                "❌ مش شايفة الرابط. أرسلّي رابط أولاً",
                 reply_markup=back_to_menu_kb(),
             )
         except TelegramBadRequest:
@@ -562,11 +561,11 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
 
     # Download with progress
     progress_text = (
-        f"⏳ جارية أنزّل ليك...\n"
+        f"⏳ قاعدة أنزّل ليك...\n"
         f"📹 {truncate_text(title, 60)}\n"
         f"🎯 {quality}\n\n"
         f"{_progress_bar(0)} 0%\n"
-        f"⬇️ جارية الاستعداد..."
+        f"⬇️ قاعدة أجهّز..."
     )
     try:
         await query.message.edit_text(progress_text)
@@ -602,7 +601,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 chat_id=ctx["chat_id"],
                 message_id=ctx["msg_id"],
                 text=(
-                    f"⏳ جارية أنزّل ليك...\n"
+                    f"⏳ قاعدة أنزّل ليك...\n"
                     f"📹 {truncate_text(ctx['title'], 60)}\n"
                     f"🎯 {ctx['quality']}\n\n"
                     f"{_progress_bar(pct)} {pct}%\n"
@@ -646,7 +645,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
         )
 
         if not file_path or not Path(file_path).exists():
-            raise RuntimeError("التحميل ما اكتمل — مش قادرة ألقى الملف")
+            raise RuntimeError("التحميل ما اكتمل — ما لقيت الملف")
 
         file_size = os.path.getsize(file_path)
 
@@ -654,7 +653,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
         if file_size > settings.max_file_size_mb * 1024 * 1024:
             raise RuntimeError(
                 f"الملف كبير زيادة ({format_size(file_size)}). "
-                f"الحد الأقصى {settings.max_file_size_mb}MB."
+                f"الحد الأقصى {settings.max_file_size_mb}MB"
             )
 
         # Update job
@@ -677,7 +676,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 chat_id=progress_ctx["chat_id"],
                 message_id=progress_ctx["msg_id"],
                 text=(
-                    f"📤 جارية أرسل ليك {truncate_text(title, 60)}...\n"
+                    f"📤 قاعدة أرسل ليك {truncate_text(title, 60)}...\n"
                     f"{_progress_bar(100)} 100%"
                 ),
             )
@@ -694,7 +693,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                     f"✅ تمام يا {query.from_user.first_name or 'غالية'}!\n"
                     f"🎵 {truncate_text(title, 80)}\n"
                     f"💾 {format_size(file_size)} • MP3\n\n"
-                    f"أنا ثونة، دايماً في الخدمة 💛"
+                    f"أنا ثونة، موجودة دايماً 💛"
                 ),
             )
         else:
@@ -704,7 +703,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                     f"✅ تمام يا {query.from_user.first_name or 'غالية'}!\n"
                     f"📹 {truncate_text(title, 80)}\n"
                     f"💾 {format_size(file_size)} • {quality}\n\n"
-                    f"أنا ثونة، دايماً في الخدمة 💛"
+                    f"أنا ثونة، موجودة دايماً 💛"
                 ),
             )
 
@@ -713,7 +712,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
             await _bot.edit_message_text(
                 chat_id=progress_ctx["chat_id"],
                 message_id=progress_ctx["msg_id"],
-                text="✅ التنزيل اكتمل بنجاح! 😊",
+                text="✅ التحميل اكتمل! 😊",
             )
         except TelegramBadRequest:
             pass
@@ -742,9 +741,9 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 chat_id=progress_ctx["chat_id"],
                 message_id=progress_ctx["msg_id"],
                 text=(
-                    f"❌ ما قادرة أكمل التنزيل 😔\n"
+                    f"❌ ما قادرة أكمل التحميل 😔\n"
                     f"السبب: {truncate_text(error_msg, 100)}\n\n"
-                    f"جرّبي رابط تاني أو غير الجودة."
+                    f"جرّبي رابط تاني أو غيري الجودة"
                 ),
                 reply_markup=back_to_menu_kb(),
             )
@@ -752,9 +751,9 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
             # Fallback: send new message if the old one is gone
             try:
                 await query.message.answer(
-                    f"❌ ما قادرة أكمل التنزيل 😔\n"
+                    f"❌ ما قادرة أكمل التحميل 😔\n"
                     f"السبب: {truncate_text(error_msg, 100)}\n\n"
-                    f"جرّبي رابط تاني أو غير الجودة.",
+                    f"جرّبي رابط تاني أو غيري الجودة",
                     reply_markup=back_to_menu_kb(),
                 )
             except TelegramBadRequest:
