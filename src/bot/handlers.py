@@ -552,20 +552,31 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
     )
 
     kind_str = "video" if kind == "video" else "audio"
-    progress_ctx = {"pct": -1, "chat_id": query.message.chat.id, "msg_id": query.message.message_id}
+    
+    # The event loop the download callbacks will be sent to
+    main_loop = asyncio.get_event_loop()
+    
+    progress_ctx = {
+        "pct": -1,
+        "chat_id": query.message.chat.id,
+        "msg_id": query.message.message_id,
+        "title": title,
+        "quality": quality,
+    }
 
-    async def _update_progress(pct: int, speed: str, eta: str, downloaded: str):
-        if pct == progress_ctx["pct"] or pct - progress_ctx["pct"] < 10:
+    async def _send_progress(pct: int, speed: str, eta: str, downloaded: str):
+        ctx = progress_ctx
+        if pct == ctx["pct"] or pct - ctx["pct"] < 10:
             return
-        progress_ctx["pct"] = pct
+        ctx["pct"] = pct
         try:
             await _bot.edit_message_text(
-                chat_id=progress_ctx["chat_id"],
-                message_id=progress_ctx["msg_id"],
+                chat_id=ctx["chat_id"],
+                message_id=ctx["msg_id"],
                 text=(
                     f"⏳ جارية أنزّل ليك...\n"
-                    f"📹 {truncate_text(title, 60)}\n"
-                    f"🎯 {quality}\n\n"
+                    f"📹 {truncate_text(ctx['title'], 60)}\n"
+                    f"🎯 {ctx['quality']}\n\n"
                     f"{_progress_bar(pct)} {pct}%\n"
                     f"⬇️ {downloaded} @ {speed}\n"
                     f"⏱ متبقي: {eta}"
@@ -575,7 +586,7 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
             pass
 
     def _hook(d):
-        """Called from yt-dlp thread — use CPython GIL to safely schedule tasks."""
+        """Called by yt-dlp from a different thread — schedule progress update."""
         try:
             if d.get("status") == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
@@ -584,16 +595,14 @@ async def _handle_quality_selection(query: CallbackQuery, state: FSMContext) -> 
                 eta = d.get("_eta_str", "N/A").strip()
                 if total > 0:
                     pct = min(int(downloaded / total * 100), 100)
-                    loop = asyncio.get_event_loop()
                     asyncio.run_coroutine_threadsafe(
-                        _update_progress(pct, speed, eta, format_size(downloaded)),
-                        loop,
+                        _send_progress(pct, speed, eta, format_size(downloaded)),
+                        main_loop,
                     )
             elif d.get("status") == "finished":
-                loop = asyncio.get_event_loop()
                 asyncio.run_coroutine_threadsafe(
-                    _update_progress(100, "تم!", "لحظات...", "جاري الإرسال"),
-                    loop,
+                    _send_progress(100, "تم!", "لحظات...", "جاري الإرسال"),
+                    main_loop,
                 )
         except Exception:
             pass
