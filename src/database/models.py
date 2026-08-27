@@ -1,7 +1,6 @@
-"""Database models and session management."""
+"""Database models for the Telegram Downloader Bot."""
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
@@ -10,13 +9,9 @@ from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime,
     Float, ForeignKey, JSON, Index, UniqueConstraint,
 )
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 
-from src.config.settings import settings
-
-
-Base = declarative_base()
+from src.database.base import Base
 
 
 class JobStatus(str, Enum):
@@ -81,33 +76,3 @@ class DownloadJob(Base):
     completed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="jobs")
-
-
-# Create engine
-engine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    future=True,
-    pool_pre_ping=True,
-    pool_recycle=300,
-)
-
-async_session_maker = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
-
-
-async def get_db_session() -> AsyncSession:
-    async with async_session_maker() as session:
-        return session
-
-
-async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def close_db() -> None:
-    await engine.dispose()

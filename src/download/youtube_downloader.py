@@ -245,6 +245,7 @@ class YTDLPDownloader:
 
         if progress_hook:
             opts["progress_hooks"] = [progress_hook]
+            opts["noprogress"] = False
 
         if kind == "audio":
             opts["postprocessors"] = [
